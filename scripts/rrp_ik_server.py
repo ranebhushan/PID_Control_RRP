@@ -15,7 +15,7 @@ import time
 # |------------------------------------------------------|
 
 def callback_response(request):
-    # Implement Inverse Kinematics here
+    # Implement RRP ROBOT Inverse Kinematics here
     #joint1 = atan2(request.x_position, request.y_position)
     return ("1+ and OnePlus")
 
