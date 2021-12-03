@@ -69,7 +69,7 @@ class RRP_robot():
         self.joint_state_subscriber = rospy.Subscriber("/rrp/joint_states", JointState, self.joint_state_callback)
    
         try:
-            self.run()
+            self.robot_move()
         except rospy.ROSInterruptException:
             rospy.loginfo("Action terminated.")
         finally:
@@ -77,16 +77,16 @@ class RRP_robot():
             numpy.savetxt('trajectory.csv', numpy.array(self.trajectory), fmt='%f', delimiter=',')
 
     def joint_state_callback(self, msg):
-        # Get current end-effector position [x, y, z] from /rrp/joint_states topic
-        # Get current joint veloctiy [joint1, joint2, joint3] from /rrp/joint_states topic
+        # Get current joint angles [joint1, joint2, joint3] from /rrp/joint_states topic
+        # Get current joint veloctiy [w1, w2, v3] from /rrp/joint_states topic
 
         # Below 2 lines are doubtful
-        # position = [msg.position[0], msg.position[1], msg.position[2]]
+        # joint_angles = [msg.position[0], msg.position[1], msg.position[2]]
         # joint_velocity = [msg.velocity[0], msg.velocity[1], msg.velocity[2]]
 
-        self.x_position = msg.current_value.position[0]
-        self.y_position = msg.current_value.position[1]
-        self.z_position = msg.current_value.position[2]
+        self.joint1_angle = msg.current_value.position[0]
+        self.joint2_angle = msg.current_value.position[1]
+        self.joint3_angle = msg.current_value.position[2]
 
         self.joint1_velocity = msg.current_value.velocity[0]
         self.joint2_velocity = msg.current_value.velocity[1]
@@ -98,7 +98,7 @@ class RRP_robot():
             self.robot_path.append([self.pose.x, self.pose.y]) # save trajectory
             rospy.loginfo("X = " + str(self.x_position) +"; Y = " + str(self.y_position) + "; Z = " + str(self.z_position))        
 
-    def run(self):
+    def robot_move(self):
         # self.vel.linear.x = 1.0
         # self.vel.angular.z = 0.0
         # self.vel_pub.publish(self.vel)
