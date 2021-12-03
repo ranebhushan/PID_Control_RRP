@@ -14,14 +14,14 @@ import time
 # |   3      |    0      |   d3+L4   |   0   |   0       |
 # |------------------------------------------------------|
 
-def callback_function(request):
+def callback_response(request):
     # Implement Inverse Kinematics here
     #joint1 = atan2(request.x_position, request.y_position)
-    return 1
+    return ("1+ and OnePlus")
 
 def rrp_ik_server():
     rospy.init_node("RRP_IK_service")
-    service = rospy.Service("rrpIK", rrpIK, callback_function)
+    service = rospy.Service("rrpIK", rrpIK, callback_response)
     rospy.spin()
 
 if __name__ == "__main__":
