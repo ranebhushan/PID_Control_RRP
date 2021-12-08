@@ -1,4 +1,7 @@
 <!-- Launch file for RRP Robot -->
 <launch>
 
+    <node name="RRP_IK_service" pkg="rbe500_project" type="rrp_ik_server.py" respawn="false" output="screen"></node>
+    <!-- <node name="RRP_IK_service" pkg="rbe500_project" type="rrp_ik_server.py" respawn="false" output="screen"></node> -->
+
 </launch>
