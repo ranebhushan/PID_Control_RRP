@@ -7,15 +7,13 @@ from sensor_msgs.msg import JointState
 class Test_Sub():
 
     def __init__(self):
-        # ROS
-        # subscribe to keyboard input
+        print("Hello")
         
         self.joint_state_subscriber = rospy.Subscriber("/rrp/joint_states", JointState, self.joint_state_callback)
+        print("Class")
        
     def joint_state_callback(self, data):
-        
-        self.current_value = JointState()
-        print(self.current_value)
+        print(data)
         # print("Current Position :", self.current_value.position)
         # print("Current Velocity :", self.current_value.velocity) 
 
