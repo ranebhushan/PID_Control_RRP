@@ -8,6 +8,10 @@ Group Members:-
 
 ### Dependencies
 
+```
+sudo apt-get install ros-noetic-ros-control ros-noetic-ros-controllers ros-noetic-gazebo-ros-pkgs ros-noetic-gazebo-ros-control
+```
+
 To run this project, you also need to add the following repository in the `/src` of your workspace.
 
 ```
