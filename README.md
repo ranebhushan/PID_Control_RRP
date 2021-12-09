@@ -3,5 +3,5 @@
 Course Project for RBE 500 - Foundations of Robotics at Worcester Polytechnic Institute
 
 Group Members:-
-- Bhushan Rane
-- Yash Patil
+- Bhushan Ashok Rane
+- Yash Rajendra Patil
