@@ -12,7 +12,7 @@ from rbe500_project.srv import rrpIK
 p1 = [0, 0.77, 0.34]
 p2 = [-0.345, 0.425, 0.24]
 p3 = [-0.67, -0.245, 0.14]
-p4 = [0.77, 0, 0.44]
+p4 = [0.77, 0.0, 0.39]
 
 x = 0
 y = 1
@@ -38,7 +38,7 @@ class PID_Controller():
         self.previous_error = 0
         
     def update(self, current_value):
-        # calculate P_term and D_term
+        # calculate P_term, I_term and D_term
         error = self.set_point - current_value
         P_term = self.Kp*error
         self.error_integral = self.error_integral + error
@@ -175,7 +175,6 @@ class RRP_robot():
         self.joint1_flag = 0
         self.joint2_flag = 0
         self.joint3_flag = 0
-
 
         # Stop for 1 second at each desired configuration
         sleep(1)
