@@ -4,8 +4,14 @@ from rbe500_project.srv import rrpIK
 
 import rospy
 import time
-import math
+from math import sin, cos, tan, asin, acos,atan,atan2
 import numpy
+
+L0 = 0.05
+L1 = 0.45
+L2 = 0.425
+L3 = 0.345
+L4 = 0.11
 
 #|L0 = 0.05; L1 = 0.45; L1 = 0.425; L3 = 0.345; L4 = 0.11|
 #|-------------------------------------------------------|
@@ -21,12 +27,14 @@ def callback_response(request):
     # Implement RRP Robot Inverse Kinematics here
     rospy.loginfo("Input Position: X = " + str(request.x_position) + " Y = " + str(request.y_position) + " Z = " + str(request.z_position))
     # z = 39/100 - d3;
-    joint3 = 0.39 - request.z_position
+    joint3 = (L0+L1-L4) - request.z_position
     
-    joint2 = math.acos((4000/1173) * ((request.x_position**2) + (request.y_position**2) - 0.2997))
+    joint2 = acos(((request.x_position**2) + (request.y_position**2) - (L2**2) - (L3**2))/(2*L2*L3))
+    
+    joint1 = atan2(request.y_position, request.x_position) - atan2((L3*sin(joint2)),(L2+(L3*cos(joint2))))
 
     rospy.loginfo("Joint Angles (in radians) : theta1 = " + str(joint1) + " theta2 = " + str(joint2) + " d3 = " + str(joint3))
-    rospy.loginfo("Joint Angles (in degrees ) : theta1 = " + str(numpy.rad2deg(joint1)) + " theta2 = " + str(numpy.rad2deg(joint2)) + " d3 = " + str(joint3))
+    rospy.loginfo("Joint Angles (in degrees) : theta1 = " + str(numpy.rad2deg(joint1)) + " theta2 = " + str(numpy.rad2deg(joint2)) + " d3 = " + str(joint3))
     return (joint1, joint2, joint3)
 
 def rrp_ik_server():
