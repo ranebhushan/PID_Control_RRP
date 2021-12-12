@@ -10,6 +10,8 @@ Group Members:-
 
 ### Dependencies
 
+Install the ROS dependencies by the following command:
+
 ```
 sudo apt-get install ros-noetic-ros-control ros-noetic-ros-controllers ros-noetic-gazebo-ros-pkgs ros-noetic-gazebo-ros-control
 ```
