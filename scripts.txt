@@ -1,0 +1,82 @@
+        # while (self.joint1_flag == 0):
+            
+        #     self.joint1_effort = joint1_PID_controller.update(self.joint1)
+
+        #     if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
+        #         self.joint1_effort = JOINT1_EFFORT_LIMIT
+        #     elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
+        #         self.joint1_effort = -JOINT1_EFFORT_LIMIT
+        #     elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0):
+        #         self.joint1_effort = 0.2
+        #     elif (self.joint1_effort < 0 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+        #         self.joint1_effort = -0.2
+
+        #     print("Joint1: ", self.joint1_effort)
+
+        #     if ((self.joint1 > (p1_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 < (p1_joint_variables.joint1 + JOINT1_TOLERANCE))):
+        #         self.joint1_flag = 1
+
+        #     self.joint2_effort = 0.0
+        #     self.joint3_effort = 0.0
+        #     self.joint1_effort_publisher.publish(self.joint1_effort)
+        #     self.joint2_effort_publisher.publish(self.joint2_effort)
+        #     self.joint3_effort_publisher.publish(self.joint3_effort)
+            
+        # self.joint1_effort = 0.0
+        # self.joint1_effort_publisher.publish(self.joint1_effort)
+        # self.joint1_flag = 0
+        # rospy.loginfo("Hey I reached P1 Joint 1")
+
+        # while (self.joint2_flag == 0):
+            
+        #     self.joint2_effort = joint2_PID_controller.update(self.joint2)
+
+        #     if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
+        #         self.joint2_effort = JOINT2_EFFORT_LIMIT
+        #     elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
+        #         self.joint2_effort = -JOINT2_EFFORT_LIMIT
+        #     elif (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
+        #         self.joint2_effort = 0.2
+        #     elif (self.joint2_effort < 0 and self.joint2_effort > -JOINT2_EFFORT_LIMIT):
+        #         self.joint2_effort = -0.2
+
+        #     print("Joint2: ", self.joint2_effort)
+
+        #     if (self.joint2 > (p1_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 < (p1_joint_variables.joint2 + JOINT2_TOLERANCE)):
+        #         self.joint2_flag = 1
+
+        #     self.joint2_effort_publisher.publish(self.joint2_effort)
+        #     self.joint1_effort = 0.0
+        #     self.joint3_effort = 0.0
+        #     self.joint1_effort_publisher.publish(self.joint1_effort)
+        #     self.joint3_effort_publisher.publish(self.joint3_effort)
+            
+        # self.joint2_effort = 0.0
+        # self.joint2_effort_publisher.publish(self.joint2_effort)
+        # self.joint2_flag = 0
+        # rospy.loginfo("Hey I reached P1 Joint 2")
+        
+        # while (self.joint3_flag == 0):
+            
+        #     self.joint3_effort = joint3_PID_controller.update(self.joint3)
+
+        #     if (self.joint3_effort > 0):
+        #         self.joint3_effort = JOINT3_POSITIVE_EFFORT_LIMIT
+        #     elif (self.joint3_effort < 0):
+        #         self.joint3_effort = JOINT3_NEGATIVE_EFFORT_LIMIT
+
+        #     print("Joint3: ", self.joint3_effort)
+
+        #     if (self.joint3 > (p1_joint_variables.joint3 - JOINT3_TOLERANCE) and self.joint3 < (p1_joint_variables.joint3 + JOINT3_TOLERANCE)):
+        #         self.joint3_flag = 1
+
+        #     self.joint3_effort_publisher.publish(self.joint3_effort)
+        #     self.joint1_effort = 0.0
+        #     self.joint2_effort = 0.0
+        #     self.joint1_effort_publisher.publish(self.joint1_effort)
+        #     self.joint2_effort_publisher.publish(self.joint2_effort)
+
+        # self.joint3_effort = 0.0
+        # self.joint3_effort_publisher.publish(self.joint3_effort)
+        # self.joint3_flag = 0
+        # rospy.loginfo("Hey I reached P1 Joint 3")
