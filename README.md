@@ -22,17 +22,17 @@ https://github.com/ranebhushan/rrp_robot.git
 
 ### Usage Guidelines
 
-- Launch the RRP robot manipulator in Gazebo using by the following command:
+Launch the RRP robot manipulator in Gazebo using by the following command:
 ```
 roslaunch rrp_gazebo gazebo.launch
 ```
 
-- Once the robot is successfully spawned in Gazebo, open a new terminal and launch the effort controller node and the joint state publisher by using the following command:
+Once the robot is successfully spawned in Gazebo, open a new terminal and launch the effort controller node and the joint state publisher by using the following command:
 ```
 roslaunch rrp_control rrp_effort_control.launch
 ```
 
-- Now, test the inverse kinematics and position control scripts by running the `rrp.launch` file in another terminal using:
+Now, test the inverse kinematics and position control scripts by running the `rrp.launch` file in another terminal using:
 ```
 roslaunch rbe500_project rrp.launch
 ```
