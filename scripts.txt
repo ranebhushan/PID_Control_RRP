@@ -1,5 +1,4 @@
-        # while (self.joint1_flag == 0):
-            
+        # while (self.joint1_flag == 0):   
         #     self.joint1_effort = joint1_PID_controller.update(self.joint1)
 
         #     if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
@@ -27,8 +26,7 @@
         # self.joint1_flag = 0
         # rospy.loginfo("Hey I reached P1 Joint 1")
 
-        # while (self.joint2_flag == 0):
-            
+        # while (self.joint2_flag == 0):    
         #     self.joint2_effort = joint2_PID_controller.update(self.joint2)
 
         #     if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
@@ -57,7 +55,6 @@
         # rospy.loginfo("Hey I reached P1 Joint 2")
         
         # while (self.joint3_flag == 0):
-            
         #     self.joint3_effort = joint3_PID_controller.update(self.joint3)
 
         #     if (self.joint3_effort > 0):
