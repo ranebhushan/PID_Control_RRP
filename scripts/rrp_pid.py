@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
+from pickle import TRUE
 import rospy
-from time import sleep
+from time import sleep, time
 from math import pi
 import numpy 
 from std_msgs.msg import String, Float64, Float64MultiArray, Header, _String
@@ -9,22 +10,31 @@ from sensor_msgs.msg import JointState
 from rbe500_project.srv import rrpIK
 
 # Desired end-effector positions
-p1 = [0, 0.77, 0.34]
+p1 = [0.0, 0.77, 0.34]
 p2 = [-0.345, 0.425, 0.24]
 p3 = [-0.67, -0.245, 0.14]
 p4 = [0.77, 0.0, 0.39]
+
+# p1 = [0.544, 0.544, 0.34]
+# p2 = [0.3, 0.645, 0.24]
+# p3 = [0.425, 0.344, 0.29]
+# p4 = [-0.426,-0.344,0.24]
 
 x = 0
 y = 1
 z = 2
 
-JOINT1_EFFORT_LIMIT = 1.0
-JOINT1_TOLERANCE = 0.10
+# Joint1 Minimum Effort Requirement +0.2 and -0.2
+JOINT1_EFFORT_LIMIT = 0.3
+JOINT1_TOLERANCE = 0.0005
 
-JOINT2_EFFORT_LIMIT = 1.0
-JOINT2_TOLERANCE = 0.10
+# Joint2 Minimum Effort Requirement +0.2 and -0.2
+JOINT2_EFFORT_LIMIT = 0.3
+JOINT2_TOLERANCE = 0.0005
 
-JOINT3_EFFORT_LIMIT = 1.0
+# Joint3 Minimum Effort Requirement +1.1 and -3.0
+JOINT3_POSITIVE_EFFORT_LIMIT = 1.1
+JOINT3_NEGATIVE_EFFORT_LIMIT = -3.0
 JOINT3_TOLERANCE = 0.001
 
 class PID_Controller():
@@ -40,8 +50,8 @@ class PID_Controller():
     def update(self, current_value):
         # calculate P_term, I_term and D_term
         error = self.set_point - current_value
-        P_term = self.Kp*error
         self.error_integral = self.error_integral + error
+        P_term = self.Kp*error
         I_term = self.Ki*(self.error_integral)
         D_term = self.Kd*(error - self.previous_error)
         self.previous_error = error
@@ -50,6 +60,7 @@ class PID_Controller():
     def setPoint(self, set_point):
         self.set_point = set_point
         self.previous_error = 0
+        self.error_integral = 0
     
     def setPID(self, P = 1.0, I = 0.0, D = 0.0):
         self.Kp = P
@@ -60,7 +71,7 @@ class RRP_robot():
 
     def __init__(self):
 
-        rospy.init_node("rrp_robot_move")
+        rospy.init_node("rrp_robot_move", disable_signals=True)
 
         rospy.loginfo("Press Ctrl + C to terminate")
 
@@ -91,6 +102,10 @@ class RRP_robot():
         self.joint2_flag = 0
         self.joint3_flag = 0
 
+        self.joint1 = 0
+        self.joint2 = 0
+        self.joint3 = 0
+
         try:
             self.robot_move()
         except rospy.ROSInterruptException:
@@ -109,12 +124,19 @@ class RRP_robot():
         self.joint3_velocity = msg.velocity[2]
 
     def robot_move(self):
-        joint1_PID_controller = PID_Controller(P = 1.0, I = 0.0, D = 0.0, set_point = 0)
-        joint2_PID_controller = PID_Controller(P = 1.0, I = 0.0, D = 0.0, set_point = 0)
-        joint3_PID_controller = PID_Controller(P = 1.0, I = 0.0, D = 0.0, set_point = 0)   
+        
+        tic = time()
         rospy.wait_for_service('rrpIK', timeout=None)
         get_joint_variables = rospy.ServiceProxy('rrpIK', rrpIK)
-        
+
+        # joint1_PID_controller = PID_Controller(P = 0.005, I = 0.0, D = 20.0, set_point = 0)
+        # joint2_PID_controller = PID_Controller(P = 0.005, I = 0.0, D = 20.0, set_point = 0)
+        # joint3_PID_controller = PID_Controller(P = 0.1, I = 0.0, D = 0.065, set_point = 0)
+
+        joint1_PID_controller = PID_Controller(P = 0.025, I = 0.0, D = 100.0, set_point = 0)
+        joint2_PID_controller = PID_Controller(P = 0.25, I = 0.0, D = 20.0, set_point = 0)
+        joint3_PID_controller = PID_Controller(P = 0.1, I = 0.0, D = 0.065, set_point = 0)
+
         # Define Joint Efforts for Robot to stay at origin
         self.joint1_effort = 0
         self.joint2_effort = 0
@@ -125,224 +147,327 @@ class RRP_robot():
 
         # Get joint angles corresponding to position p1(0, 0.77, 0.34)
         rospy.loginfo("Requesting Joint Variables for Position p1")
-        rospy.loginfo("X = " + str(p1[x]) + " Y = " + str(p1[y]) + " Z = " + str(p1[z]))
+        rospy.loginfo("Input Position 1: X = " + str(p1[x]) + ", Y = " + str(p1[y]) + ", Z = " + str(p1[z]))
         p1_joint_variables = get_joint_variables(p1[x], p1[y], p1[z])
         
         joint1_PID_controller.setPoint(p1_joint_variables.joint1)
         joint2_PID_controller.setPoint(p1_joint_variables.joint2)
         joint3_PID_controller.setPoint(p1_joint_variables.joint3)
-
+        rospy.loginfo("Joint Angles (in radians) : theta1 = " + str(p1_joint_variables.joint1) + ", theta2 = " + str(p1_joint_variables.joint2) + ", d3 = " + str(p1_joint_variables.joint3))
+     
         while (self.joint1_flag == 0 or self.joint2_flag == 0 or self.joint3_flag == 0):
+
             self.joint1_effort = joint1_PID_controller.update(self.joint1)
             self.joint2_effort = joint2_PID_controller.update(self.joint2)
             self.joint3_effort = joint3_PID_controller.update(self.joint3)
-            rospy.loginfo("Joint1 = " + str(self.joint1) + " Joint2 = " + str(self.joint2) + " Joint3 = " + str(self.joint3))
-            # Effort Constraints
+
             if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
                 self.joint1_effort = JOINT1_EFFORT_LIMIT
             elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
                 self.joint1_effort = -JOINT1_EFFORT_LIMIT
-            
+            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0):
+                self.joint1_effort = 0.2
+            elif (self.joint1_effort < 0 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+                self.joint1_effort = -0.2
+            elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
+                self.joint1_effort = 0.0
+            elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
+                self.joint1_effort = -0.0
+
             if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
                 self.joint2_effort = JOINT2_EFFORT_LIMIT
             elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
                 self.joint2_effort = -JOINT2_EFFORT_LIMIT
-
-            if (self.joint3_effort > JOINT3_EFFORT_LIMIT):
-                self.joint3_effort = JOINT3_EFFORT_LIMIT
-            elif (self.joint3_effort < -JOINT3_EFFORT_LIMIT):
-                self.joint3_effort = -JOINT3_EFFORT_LIMIT
+            elif (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
+                self.joint2_effort = 0.2
+            elif (self.joint2_effort < 0 and self.joint2_effort > -JOINT2_EFFORT_LIMIT):
+                self.joint2_effort = -0.2
+            elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
+                self.joint2_effort = 0.0
+            elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
+                self.joint2_effort = -0.0
             
-            # Loop Break Condition
-            if (self.joint1 > (p1_joint_variables.joint1 - JOINT1_TOLERANCE) and self.joint1 < (p1_joint_variables.joint1 + JOINT1_TOLERANCE)):
+            if (self.joint3_effort > 0):
+                self.joint3_effort = JOINT3_POSITIVE_EFFORT_LIMIT
+            elif (self.joint3_effort < 0):
+                self.joint3_effort = JOINT3_NEGATIVE_EFFORT_LIMIT
+
+            # print("Joint1: ",self.joint1_effort, " Joint2: ", self.joint2_effort, " Joint3: ", self.joint3_effort)
+
+            if ((self.joint1 < (p1_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 > (p1_joint_variables.joint1 + JOINT1_TOLERANCE))):
+                self.joint1_flag = 0
+            if ((self.joint1 > (p1_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 < (p1_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 1
+            
+            if (self.joint2 < (p1_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 > (p1_joint_variables.joint2 + JOINT2_TOLERANCE)):
+                self.joint2_flag = 0
             if (self.joint2 > (p1_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 < (p1_joint_variables.joint2 + JOINT2_TOLERANCE)):
                 self.joint2_flag = 1
+
             if (self.joint3 > (p1_joint_variables.joint3 - JOINT3_TOLERANCE) and self.joint3 < (p1_joint_variables.joint3 + JOINT3_TOLERANCE)):
                 self.joint3_flag = 1
-            # Publish effort from PID controller to Robot 
+
             self.joint1_effort_publisher.publish(self.joint1_effort)
             self.joint2_effort_publisher.publish(self.joint2_effort)
             self.joint3_effort_publisher.publish(self.joint3_effort)
 
-        # Stop the Robot
-        self.joint1_effort = 0
-        self.joint2_effort = 0
-        self.joint3_effort = 0
+        self.joint1_effort = 0.0
+        self.joint2_effort = 0.0
+        self.joint3_effort = 0.0
         self.joint1_effort_publisher.publish(self.joint1_effort)
         self.joint2_effort_publisher.publish(self.joint2_effort)
         self.joint3_effort_publisher.publish(self.joint3_effort)
         self.joint1_flag = 0
         self.joint2_flag = 0
         self.joint3_flag = 0
+        rospy.loginfo("HEY I REACHED POSITION 1")
+        rospy.loginfo("Current Joint1 = " + str(self.joint1) + ", Joint2 = " + str(self.joint2) + ", Joint3 = " + str(self.joint3))
 
         # Stop for 1 second at each desired configuration
         sleep(1)
 
         # Get joint angles corresponding to position p2(-0.345, 0.425, 0.24)
         rospy.loginfo("Requesting Joint Variables for Position p2")
-        rospy.loginfo("X = " + str(p2[x]) + " Y = " + str(p2[y]) + " Z = " + str(p2[z]))
+        rospy.loginfo("Input Position 2: X = " + str(p2[x]) + ", Y = " + str(p2[y]) + ", Z = " + str(p2[z]))
         p2_joint_variables = get_joint_variables(p2[x], p2[y], p2[z])
         
         joint1_PID_controller.setPoint(p2_joint_variables.joint1)
         joint2_PID_controller.setPoint(p2_joint_variables.joint2)
         joint3_PID_controller.setPoint(p2_joint_variables.joint3)
-
+        rospy.loginfo("Joint Angles (in radians) : theta1 = " + str(p2_joint_variables.joint1) + ", theta2 = " + str(p2_joint_variables.joint2) + ", d3 = " + str(p2_joint_variables.joint3))
+     
         while (self.joint1_flag == 0 or self.joint2_flag == 0 or self.joint3_flag == 0):
+
             self.joint1_effort = joint1_PID_controller.update(self.joint1)
             self.joint2_effort = joint2_PID_controller.update(self.joint2)
             self.joint3_effort = joint3_PID_controller.update(self.joint3)
-            rospy.loginfo("Joint1 = " + str(self.joint1) + " Joint2 = " + str(self.joint2) + " Joint3 = " + str(self.joint3))
-            # Effort Constraints
+
             if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
                 self.joint1_effort = JOINT1_EFFORT_LIMIT
             elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
                 self.joint1_effort = -JOINT1_EFFORT_LIMIT
-            
+            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0):
+                self.joint1_effort = 0.2
+            elif (self.joint1_effort < 0 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+                self.joint1_effort = -0.2
+            elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
+                self.joint1_effort = 0.0
+            elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
+                self.joint1_effort = -0.0
+
             if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
                 self.joint2_effort = JOINT2_EFFORT_LIMIT
             elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
                 self.joint2_effort = -JOINT2_EFFORT_LIMIT
-
-            if (self.joint3_effort > JOINT3_EFFORT_LIMIT):
-                self.joint3_effort = JOINT3_EFFORT_LIMIT
-            elif (self.joint3_effort < -JOINT3_EFFORT_LIMIT):
-                self.joint3_effort = -JOINT3_EFFORT_LIMIT
+            elif (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
+                self.joint2_effort = 0.2
+            elif (self.joint2_effort < 0 and self.joint2_effort > -JOINT2_EFFORT_LIMIT):
+                self.joint2_effort = -0.2
+            elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
+                self.joint2_effort = 0.0
+            elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
+                self.joint2_effort = -0.0
             
-            # Loop Break Condition
-            if (self.joint1 > (p2_joint_variables.joint1 - JOINT1_TOLERANCE) and self.joint1 < (p2_joint_variables.joint1 + JOINT1_TOLERANCE)):
+            if (self.joint3_effort > 0):
+                self.joint3_effort = JOINT3_POSITIVE_EFFORT_LIMIT
+            elif (self.joint3_effort < 0):
+                self.joint3_effort = JOINT3_NEGATIVE_EFFORT_LIMIT
+
+            # print("Joint1: ",self.joint1_effort, " Joint2: ", self.joint2_effort, " Joint3: ", self.joint3_effort)
+
+            if ((self.joint1 < (p2_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 > (p2_joint_variables.joint1 + JOINT1_TOLERANCE))):
+                self.joint1_flag = 0
+            if ((self.joint1 > (p2_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 < (p2_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 1
+            
+            if (self.joint2 < (p2_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 > (p2_joint_variables.joint2 + JOINT2_TOLERANCE)):
+                self.joint2_flag = 0
             if (self.joint2 > (p2_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 < (p2_joint_variables.joint2 + JOINT2_TOLERANCE)):
                 self.joint2_flag = 1
+
             if (self.joint3 > (p2_joint_variables.joint3 - JOINT3_TOLERANCE) and self.joint3 < (p2_joint_variables.joint3 + JOINT3_TOLERANCE)):
                 self.joint3_flag = 1
-            # Publish effort from PID controller to Robot 
+
             self.joint1_effort_publisher.publish(self.joint1_effort)
             self.joint2_effort_publisher.publish(self.joint2_effort)
             self.joint3_effort_publisher.publish(self.joint3_effort)
 
-        # Stop the Robot
-        self.joint1_effort = 0
-        self.joint2_effort = 0
-        self.joint3_effort = 0
+        self.joint1_effort = 0.0
+        self.joint2_effort = 0.0
+        self.joint3_effort = 0.0
         self.joint1_effort_publisher.publish(self.joint1_effort)
         self.joint2_effort_publisher.publish(self.joint2_effort)
         self.joint3_effort_publisher.publish(self.joint3_effort)
         self.joint1_flag = 0
         self.joint2_flag = 0
         self.joint3_flag = 0
+        rospy.loginfo("HEY I REACHED POSITION 2")
+        rospy.loginfo("Current Joint1 = " + str(self.joint1) + ", Joint2 = " + str(self.joint2) + ", Joint3 = " + str(self.joint3))
 
         # Stop for 1 second at each desired configuration
         sleep(1)
 
         # Get joint angles corresponding to position p3(-0.67, -0.245, 0.14)
         rospy.loginfo("Requesting Joint Variables for Position p3")
-        rospy.loginfo("X = " + str(p3[x]) + " Y = " + str(p3[y]) + " Z = " + str(p3[z]))
+        rospy.loginfo("Input Position 3: X = " + str(p3[x]) + ", Y = " + str(p3[y]) + ", Z = " + str(p3[z]))
         p3_joint_variables = get_joint_variables(p3[x], p3[y], p3[z])
         
         joint1_PID_controller.setPoint(p3_joint_variables.joint1)
         joint2_PID_controller.setPoint(p3_joint_variables.joint2)
         joint3_PID_controller.setPoint(p3_joint_variables.joint3)
-
+        rospy.loginfo("Joint Angles (in radians) : theta1 = " + str(p3_joint_variables.joint1) + ", theta2 = " + str(p3_joint_variables.joint2) + ", d3 = " + str(p3_joint_variables.joint3))
+        
         while (self.joint1_flag == 0 or self.joint2_flag == 0 or self.joint3_flag == 0):
-            self.joint1_effort = joint1_PID_controller.update(self.joint1)
+
+            self.joint1_effort = 4*joint1_PID_controller.update(self.joint1)
             self.joint2_effort = joint2_PID_controller.update(self.joint2)
             self.joint3_effort = joint3_PID_controller.update(self.joint3)
-            rospy.loginfo("Joint1 = " + str(self.joint1) + " Joint2 = " + str(self.joint2) + " Joint3 = " + str(self.joint3))
-            # Effort Constraints
+
             if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = JOINT1_EFFORT_LIMIT
+                self.joint1_effort = 0.5
             elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = -JOINT1_EFFORT_LIMIT
-            
+                self.joint1_effort = -0.5
+            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0):
+                self.joint1_effort = 0.2
+            elif (self.joint1_effort < 0 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+                self.joint1_effort = -0.2
+            elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
+                self.joint1_effort = 0.0
+            elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
+                self.joint1_effort = -0.0
+
             if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
                 self.joint2_effort = JOINT2_EFFORT_LIMIT
             elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
                 self.joint2_effort = -JOINT2_EFFORT_LIMIT
-
-            if (self.joint3_effort > JOINT3_EFFORT_LIMIT):
-                self.joint3_effort = JOINT3_EFFORT_LIMIT
-            elif (self.joint3_effort < -JOINT3_EFFORT_LIMIT):
-                self.joint3_effort = -JOINT3_EFFORT_LIMIT
+            elif (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
+                self.joint2_effort = 0.2
+            elif (self.joint2_effort < 0 and self.joint2_effort > -JOINT2_EFFORT_LIMIT):
+                self.joint2_effort = -0.2
+            elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
+                self.joint2_effort = 0.0
+            elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
+                self.joint2_effort = -0.0
             
-            # Loop Break Condition
-            if (self.joint1 > (p3_joint_variables.joint1 - JOINT1_TOLERANCE) and self.joint1 < (p3_joint_variables.joint1 + JOINT1_TOLERANCE)):
+            if (self.joint3_effort > 0):
+                self.joint3_effort = JOINT3_POSITIVE_EFFORT_LIMIT
+            elif (self.joint3_effort < 0):
+                self.joint3_effort = JOINT3_NEGATIVE_EFFORT_LIMIT
+
+            # print("Joint1: ",self.joint1_effort, " Joint2: ", self.joint2_effort, " Joint3: ", self.joint3_effort)
+
+            if ((self.joint1 < (p3_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 > (p3_joint_variables.joint1 + JOINT1_TOLERANCE))):
+                self.joint1_flag = 0
+            if ((self.joint1 > (p3_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 < (p3_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 1
+            
+            if (self.joint2 < (p3_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 > (p3_joint_variables.joint2 + JOINT2_TOLERANCE)):
+                self.joint2_flag = 0
             if (self.joint2 > (p3_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 < (p3_joint_variables.joint2 + JOINT2_TOLERANCE)):
                 self.joint2_flag = 1
+
             if (self.joint3 > (p3_joint_variables.joint3 - JOINT3_TOLERANCE) and self.joint3 < (p3_joint_variables.joint3 + JOINT3_TOLERANCE)):
                 self.joint3_flag = 1
-            # Publish effort from PID controller to Robot 
+
             self.joint1_effort_publisher.publish(self.joint1_effort)
             self.joint2_effort_publisher.publish(self.joint2_effort)
             self.joint3_effort_publisher.publish(self.joint3_effort)
 
-        # Stop the Robot
-        self.joint1_effort = 0
-        self.joint2_effort = 0
-        self.joint3_effort = 0
+        self.joint1_effort = 0.0
+        self.joint2_effort = 0.0
+        self.joint3_effort = 0.0
         self.joint1_effort_publisher.publish(self.joint1_effort)
         self.joint2_effort_publisher.publish(self.joint2_effort)
         self.joint3_effort_publisher.publish(self.joint3_effort)
         self.joint1_flag = 0
         self.joint2_flag = 0
         self.joint3_flag = 0
+        rospy.loginfo("HEY I REACHED POSITION 3")
+        rospy.loginfo("Current Joint1 = " + str(self.joint1) + ", Joint2 = " + str(self.joint2) + ", Joint3 = " + str(self.joint3))
 
         # Stop for 1 second at each desired configuration
         sleep(1)
 
         # Get joint angles corresponding to position p4(0.77, 0, 0.44)
         rospy.loginfo("Requesting Joint Variables for Position p4")
-        rospy.loginfo("X = " + str(p4[x]) + " Y = " + str(p4[y]) + " Z = " + str(p4[z]))
+        rospy.loginfo("Input Position 4: X = " + str(p4[x]) + ", Y = " + str(p4[y]) + ", Z = " + str(p4[z]))
         p4_joint_variables = get_joint_variables(p4[x], p4[y], p4[z])
         
         joint1_PID_controller.setPoint(p4_joint_variables.joint1)
         joint2_PID_controller.setPoint(p4_joint_variables.joint2)
         joint3_PID_controller.setPoint(p4_joint_variables.joint3)
+        rospy.loginfo("Joint Angles (in radians) : theta1 = " + str(p4_joint_variables.joint1) + ", theta2 = " + str(p4_joint_variables.joint2) + ", d3 = " + str(p4_joint_variables.joint3))
 
         while (self.joint1_flag == 0 or self.joint2_flag == 0 or self.joint3_flag == 0):
+
             self.joint1_effort = joint1_PID_controller.update(self.joint1)
             self.joint2_effort = joint2_PID_controller.update(self.joint2)
             self.joint3_effort = joint3_PID_controller.update(self.joint3)
-            rospy.loginfo("Joint1 = " + str(self.joint1) + " Joint2 = " + str(self.joint2) + " Joint3 = " + str(self.joint3))
-            # Effort Constraints
+
             if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
                 self.joint1_effort = JOINT1_EFFORT_LIMIT
             elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
                 self.joint1_effort = -JOINT1_EFFORT_LIMIT
-            
+            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0):
+                self.joint1_effort = 0.2
+            elif (self.joint1_effort < 0 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+                self.joint1_effort = -0.2
+            elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
+                self.joint1_effort = 0.0
+            elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
+                self.joint1_effort = -0.0
+
             if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
                 self.joint2_effort = JOINT2_EFFORT_LIMIT
             elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
                 self.joint2_effort = -JOINT2_EFFORT_LIMIT
-
-            if (self.joint3_effort > JOINT3_EFFORT_LIMIT):
-                self.joint3_effort = JOINT3_EFFORT_LIMIT
-            elif (self.joint3_effort < -JOINT3_EFFORT_LIMIT):
-                self.joint3_effort = -JOINT3_EFFORT_LIMIT
+            elif (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
+                self.joint2_effort = 0.2
+            elif (self.joint2_effort < 0 and self.joint2_effort > -JOINT2_EFFORT_LIMIT):
+                self.joint2_effort = -0.2
+            elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
+                self.joint2_effort = 0.0
+            elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
+                self.joint2_effort = -0.0
             
-            # Loop Break Condition
-            if (self.joint1 > (p4_joint_variables.joint1 - JOINT1_TOLERANCE) and self.joint1 < (p4_joint_variables.joint1 + JOINT1_TOLERANCE)):
+            if (self.joint3_effort > 0):
+                self.joint3_effort = JOINT3_POSITIVE_EFFORT_LIMIT
+            elif (self.joint3_effort < 0):
+                self.joint3_effort = JOINT3_NEGATIVE_EFFORT_LIMIT
+
+            # print("Joint1: ",self.joint1_effort, " Joint2: ", self.joint2_effort, " Joint3: ", self.joint3_effort)
+
+            if ((self.joint1 < (p4_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 > (p4_joint_variables.joint1 + JOINT1_TOLERANCE))):
+                self.joint1_flag = 0
+            if ((self.joint1 > (p4_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 < (p4_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 1
+            
+            if (self.joint2 < (p4_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 > (p4_joint_variables.joint2 + JOINT2_TOLERANCE)):
+                self.joint2_flag = 0
             if (self.joint2 > (p4_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 < (p4_joint_variables.joint2 + JOINT2_TOLERANCE)):
                 self.joint2_flag = 1
+
             if (self.joint3 > (p4_joint_variables.joint3 - JOINT3_TOLERANCE) and self.joint3 < (p4_joint_variables.joint3 + JOINT3_TOLERANCE)):
                 self.joint3_flag = 1
-            # Publish effort from PID controller to Robot 
+
             self.joint1_effort_publisher.publish(self.joint1_effort)
             self.joint2_effort_publisher.publish(self.joint2_effort)
             self.joint3_effort_publisher.publish(self.joint3_effort)
 
-        # Stop the Robot
-        self.joint1_effort = 0
-        self.joint2_effort = 0
-        self.joint3_effort = 0
+        self.joint1_effort = 0.0
+        self.joint2_effort = 0.0
+        self.joint3_effort = 0.0
         self.joint1_effort_publisher.publish(self.joint1_effort)
         self.joint2_effort_publisher.publish(self.joint2_effort)
         self.joint3_effort_publisher.publish(self.joint3_effort)
         self.joint1_flag = 0
         self.joint2_flag = 0
         self.joint3_flag = 0
+        rospy.loginfo("HEY I REACHED POSITION 4")
+        rospy.loginfo("Current Joint1 = " + str(self.joint1) + ", Joint2 = " + str(self.joint2) + ", Joint3 = " + str(self.joint3))
+        toc = time()
+        rospy.loginfo("TASK COMPLETE")
+        rospy.loginfo("Elapsed time is " + str(toc-tic) + " seconds")
 
 if __name__ == '__main__':
     pid_controller = PID_Controller()
