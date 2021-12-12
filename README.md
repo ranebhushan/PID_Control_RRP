@@ -18,9 +18,7 @@ sudo apt-get install ros-noetic-ros-control ros-noetic-ros-controllers ros-noeti
 
 To run this project, you also need to add the following repository in the `/src` of your workspace.
 
-```
-https://github.com/ranebhushan/rrp_robot.git
-```
+[rrp_robot](https://github.com/ranebhushan/rrp_robot.git)
 
 ### Usage Guidelines
 
