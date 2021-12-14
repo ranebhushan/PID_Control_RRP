@@ -25,12 +25,12 @@ y = 1
 z = 2
 
 # Joint1 Minimum Effort Requirement +0.2 and -0.2
-JOINT1_EFFORT_LIMIT = 0.3
-JOINT1_TOLERANCE = 0.0005
+JOINT1_EFFORT_LIMIT = 0.5
+JOINT1_TOLERANCE = 0.001
 
 # Joint2 Minimum Effort Requirement +0.2 and -0.2
-JOINT2_EFFORT_LIMIT = 0.3
-JOINT2_TOLERANCE = 0.0005
+JOINT2_EFFORT_LIMIT = 0.5
+JOINT2_TOLERANCE = 0.001
 
 # Joint3 Minimum Effort Requirement +1.1 and -3.0
 JOINT3_POSITIVE_EFFORT_LIMIT = 1.1
@@ -90,7 +90,7 @@ class RRP_robot():
         self.joint3_effort.data = 0
         self.joint3_effort_publisher = rospy.Publisher("/rrp/joint3_effort_controller/command", Float64, queue_size=10)
 
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(100)
 
         # Subscribe to Joint States Topic
         self.current_value = JointState()
@@ -105,6 +105,10 @@ class RRP_robot():
         self.joint1 = 0
         self.joint2 = 0
         self.joint3 = 0
+
+        self.joint1_velocity = 0
+        self.joint2_velocity = 0
+        self.joint3_velocity = 0
 
         try:
             self.robot_move()
@@ -133,8 +137,8 @@ class RRP_robot():
         # joint2_PID_controller = PID_Controller(P = 0.005, I = 0.0, D = 20.0, set_point = 0)
         # joint3_PID_controller = PID_Controller(P = 0.1, I = 0.0, D = 0.065, set_point = 0)
 
-        joint1_PID_controller = PID_Controller(P = 0.025, I = 0.0, D = 100.0, set_point = 0)
-        joint2_PID_controller = PID_Controller(P = 0.25, I = 0.0, D = 20.0, set_point = 0)
+        joint1_PID_controller = PID_Controller(P = 1.0, I = 0.0, D = 100.0, set_point = 0)
+        joint2_PID_controller = PID_Controller(P = 1.0, I = 0.0, D = 50.0, set_point = 0)
         joint3_PID_controller = PID_Controller(P = 0.1, I = 0.0, D = 0.065, set_point = 0)
 
         # Define Joint Efforts for Robot to stay at origin
@@ -165,9 +169,9 @@ class RRP_robot():
                 self.joint1_effort = JOINT1_EFFORT_LIMIT
             elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
                 self.joint1_effort = -JOINT1_EFFORT_LIMIT
-            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0):
+            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0.1):
                 self.joint1_effort = 0.2
-            elif (self.joint1_effort < 0 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+            elif (self.joint1_effort < 0.1 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
                 self.joint1_effort = -0.2
             elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
                 self.joint1_effort = 0.0
@@ -194,14 +198,14 @@ class RRP_robot():
 
             # print("Joint1: ",self.joint1_effort, " Joint2: ", self.joint2_effort, " Joint3: ", self.joint3_effort)
 
-            if ((self.joint1 < (p1_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 > (p1_joint_variables.joint1 + JOINT1_TOLERANCE))):
+            if ((self.joint1 <= (p1_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 >= (p1_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 0
             if ((self.joint1 > (p1_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 < (p1_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 1
             
-            if (self.joint2 < (p1_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 > (p1_joint_variables.joint2 + JOINT2_TOLERANCE)):
+            if ((self.joint2 <= (p1_joint_variables.joint2 - JOINT2_TOLERANCE)) and (self.joint2 >= (p1_joint_variables.joint2 + JOINT2_TOLERANCE))):
                 self.joint2_flag = 0
-            if (self.joint2 > (p1_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 < (p1_joint_variables.joint2 + JOINT2_TOLERANCE)):
+            if ((self.joint2 > (p1_joint_variables.joint2 - JOINT2_TOLERANCE)) and (self.joint2 < (p1_joint_variables.joint2 + JOINT2_TOLERANCE))):
                 self.joint2_flag = 1
 
             if (self.joint3 > (p1_joint_variables.joint3 - JOINT3_TOLERANCE) and self.joint3 < (p1_joint_variables.joint3 + JOINT3_TOLERANCE)):
@@ -275,14 +279,14 @@ class RRP_robot():
 
             # print("Joint1: ",self.joint1_effort, " Joint2: ", self.joint2_effort, " Joint3: ", self.joint3_effort)
 
-            if ((self.joint1 < (p2_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 > (p2_joint_variables.joint1 + JOINT1_TOLERANCE))):
+            if ((self.joint1 <= (p2_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 >= (p2_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 0
             if ((self.joint1 > (p2_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 < (p2_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 1
             
-            if (self.joint2 < (p2_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 > (p2_joint_variables.joint2 + JOINT2_TOLERANCE)):
+            if ((self.joint2 <= (p2_joint_variables.joint2 - JOINT2_TOLERANCE)) and (self.joint2 >= (p2_joint_variables.joint2 + JOINT2_TOLERANCE))):
                 self.joint2_flag = 0
-            if (self.joint2 > (p2_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 < (p2_joint_variables.joint2 + JOINT2_TOLERANCE)):
+            if ((self.joint2 > (p2_joint_variables.joint2 - JOINT2_TOLERANCE)) and (self.joint2 < (p2_joint_variables.joint2 + JOINT2_TOLERANCE))):
                 self.joint2_flag = 1
 
             if (self.joint3 > (p2_joint_variables.joint3 - JOINT3_TOLERANCE) and self.joint3 < (p2_joint_variables.joint3 + JOINT3_TOLERANCE)):
@@ -356,14 +360,14 @@ class RRP_robot():
 
             # print("Joint1: ",self.joint1_effort, " Joint2: ", self.joint2_effort, " Joint3: ", self.joint3_effort)
 
-            if ((self.joint1 < (p3_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 > (p3_joint_variables.joint1 + JOINT1_TOLERANCE))):
+            if ((self.joint1 <= (p3_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 >= (p3_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 0
             if ((self.joint1 > (p3_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 < (p3_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 1
             
-            if (self.joint2 < (p3_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 > (p3_joint_variables.joint2 + JOINT2_TOLERANCE)):
+            if ((self.joint2 <= (p3_joint_variables.joint2 - JOINT2_TOLERANCE)) and (self.joint2 >= (p3_joint_variables.joint2 + JOINT2_TOLERANCE))):
                 self.joint2_flag = 0
-            if (self.joint2 > (p3_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 < (p3_joint_variables.joint2 + JOINT2_TOLERANCE)):
+            if ((self.joint2 > (p3_joint_variables.joint2 - JOINT2_TOLERANCE)) and (self.joint2 < (p3_joint_variables.joint2 + JOINT2_TOLERANCE))):
                 self.joint2_flag = 1
 
             if (self.joint3 > (p3_joint_variables.joint3 - JOINT3_TOLERANCE) and self.joint3 < (p3_joint_variables.joint3 + JOINT3_TOLERANCE)):
@@ -437,12 +441,12 @@ class RRP_robot():
 
             # print("Joint1: ",self.joint1_effort, " Joint2: ", self.joint2_effort, " Joint3: ", self.joint3_effort)
 
-            if ((self.joint1 < (p4_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 > (p4_joint_variables.joint1 + JOINT1_TOLERANCE))):
+            if ((self.joint1 <= (p4_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 >= (p4_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 0
             if ((self.joint1 > (p4_joint_variables.joint1 - JOINT1_TOLERANCE)) and (self.joint1 < (p4_joint_variables.joint1 + JOINT1_TOLERANCE))):
                 self.joint1_flag = 1
             
-            if (self.joint2 < (p4_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 > (p4_joint_variables.joint2 + JOINT2_TOLERANCE)):
+            if (self.joint2 <= (p4_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 >= (p4_joint_variables.joint2 + JOINT2_TOLERANCE)):
                 self.joint2_flag = 0
             if (self.joint2 > (p4_joint_variables.joint2 - JOINT2_TOLERANCE) and self.joint2 < (p4_joint_variables.joint2 + JOINT2_TOLERANCE)):
                 self.joint2_flag = 1
