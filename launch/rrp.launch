@@ -1,7 +1,5 @@
 <!-- Launch file for RRP Robot -->
 <launch>
-
     <node name="RRP_IK_service" pkg="rbe500_project" type="rrp_ik_server.py" respawn="false" output="screen"></node>
     <node name="rrp_robot_move" pkg="rbe500_project" type="rrp_pid.py" respawn="false" output="screen"></node>
-
 </launch>
