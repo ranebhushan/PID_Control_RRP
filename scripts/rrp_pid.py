@@ -30,7 +30,7 @@ JOINT1_TOLERANCE = 0.001
 
 # Joint2 Minimum Effort Requirement +0.2 and -0.2
 JOINT2_EFFORT_LIMIT = 0.5
-JOINT2_TOLERANCE = 0.001
+JOINT2_TOLERANCE = 0.005
 
 # Joint3 Minimum Effort Requirement +1.1 and -3.0
 JOINT3_POSITIVE_EFFORT_LIMIT = 1.1
@@ -53,7 +53,7 @@ class PID_Controller():
         self.error_integral = self.error_integral + error
         P_term = self.Kp*error
         I_term = self.Ki*(self.error_integral)
-        D_term = self.Kd*(error - self.previous_error)
+        D_term = self.Kd*((error - self.previous_error)/0.01)
         self.previous_error = error
         return P_term + I_term + D_term
 
@@ -128,18 +128,17 @@ class RRP_robot():
         self.joint3_velocity = msg.velocity[2]
 
     def robot_move(self):
-        
-        tic = time()
+                
         rospy.wait_for_service('rrpIK', timeout=None)
         get_joint_variables = rospy.ServiceProxy('rrpIK', rrpIK)
-
-        # joint1_PID_controller = PID_Controller(P = 0.005, I = 0.0, D = 20.0, set_point = 0)
-        # joint2_PID_controller = PID_Controller(P = 0.005, I = 0.0, D = 20.0, set_point = 0)
-        # joint3_PID_controller = PID_Controller(P = 0.1, I = 0.0, D = 0.065, set_point = 0)
-
-        joint1_PID_controller = PID_Controller(P = 1.0, I = 0.0, D = 100.0, set_point = 0)
-        joint2_PID_controller = PID_Controller(P = 1.0, I = 0.0, D = 50.0, set_point = 0)
+        tic = time()
+        joint1_PID_controller = PID_Controller(P = 10.0, I = 0.00001, D = 75.0, set_point = 0)
+        joint2_PID_controller = PID_Controller(P = 5.0, I = 0.00001, D = 40.0, set_point = 0)
         joint3_PID_controller = PID_Controller(P = 0.1, I = 0.0, D = 0.065, set_point = 0)
+
+        # joint1_PID_controller = PID_Controller(P = 0.5, I = 0.0, D = 0.1, set_point = 0)
+        # joint2_PID_controller = PID_Controller(P = 0.5, I = 0.0, D = 0.1, set_point = 0)
+        # joint3_PID_controller = PID_Controller(P = 0.1, I = 0.0, D = 0.065, set_point = 0)
 
         # Define Joint Efforts for Robot to stay at origin
         self.joint1_effort = 0
@@ -153,43 +152,47 @@ class RRP_robot():
         rospy.loginfo("Requesting Joint Variables for Position p1")
         rospy.loginfo("Input Position 1: X = " + str(p1[x]) + ", Y = " + str(p1[y]) + ", Z = " + str(p1[z]))
         p1_joint_variables = get_joint_variables(p1[x], p1[y], p1[z])
-        
+      
         joint1_PID_controller.setPoint(p1_joint_variables.joint1)
         joint2_PID_controller.setPoint(p1_joint_variables.joint2)
         joint3_PID_controller.setPoint(p1_joint_variables.joint3)
+
+        joint1_PID_controller.setPID(P = 5.0, I = 0.00001, D = 20)
+        joint2_PID_controller.setPID(P = 3.0, I = 0.00001, D = 25)
+
         rospy.loginfo("Joint Angles (in radians) : theta1 = " + str(p1_joint_variables.joint1) + ", theta2 = " + str(p1_joint_variables.joint2) + ", d3 = " + str(p1_joint_variables.joint3))
-     
+
         while (self.joint1_flag == 0 or self.joint2_flag == 0 or self.joint3_flag == 0):
 
             self.joint1_effort = joint1_PID_controller.update(self.joint1)
             self.joint2_effort = joint2_PID_controller.update(self.joint2)
             self.joint3_effort = joint3_PID_controller.update(self.joint3)
 
-            if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = JOINT1_EFFORT_LIMIT
-            elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = -JOINT1_EFFORT_LIMIT
-            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0.1):
+            # if (self.joint1_effort > 5.0):
+            #     self.joint1_effort = 5.0
+            # elif (self.joint1_effort < -5.0):
+            #     self.joint1_effort = -5.0
+            if (self.joint1_effort < 0.2 and self.joint1_effort > 0):
                 self.joint1_effort = 0.2
-            elif (self.joint1_effort < 0.1 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+            elif (self.joint1_effort < 0 and self.joint1_effort > -0.2):
                 self.joint1_effort = -0.2
-            elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
-                self.joint1_effort = 0.0
-            elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
-                self.joint1_effort = -0.0
+            # elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
+            #     self.joint1_effort = 0.0
+            # elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
+            #     self.joint1_effort = -0.0
 
-            if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
-                self.joint2_effort = JOINT2_EFFORT_LIMIT
-            elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
-                self.joint2_effort = -JOINT2_EFFORT_LIMIT
-            elif (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
+            # if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
+            #     self.joint2_effort = JOINT2_EFFORT_LIMIT
+            # elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
+            #     self.joint2_effort = -JOINT2_EFFORT_LIMIT
+            if (self.joint2_effort < 0.2 and self.joint2_effort > 0):
                 self.joint2_effort = 0.2
-            elif (self.joint2_effort < 0 and self.joint2_effort > -JOINT2_EFFORT_LIMIT):
+            elif (self.joint2_effort < 0 and self.joint2_effort > -0.2):
                 self.joint2_effort = -0.2
-            elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
-                self.joint2_effort = 0.0
-            elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
-                self.joint2_effort = -0.0
+            # elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
+            #     self.joint2_effort = 0.0
+            # elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
+            #     self.joint2_effort = -0.0
             
             if (self.joint3_effort > 0):
                 self.joint3_effort = JOINT3_POSITIVE_EFFORT_LIMIT
@@ -214,7 +217,8 @@ class RRP_robot():
             self.joint1_effort_publisher.publish(self.joint1_effort)
             self.joint2_effort_publisher.publish(self.joint2_effort)
             self.joint3_effort_publisher.publish(self.joint3_effort)
-
+        rospy.loginfo("HEY I REACHED POSITION 1")
+        rospy.loginfo("Current Joint1 = " + str(self.joint1) + ", Joint2 = " + str(self.joint2) + ", Joint3 = " + str(self.joint3))
         self.joint1_effort = 0.0
         self.joint2_effort = 0.0
         self.joint3_effort = 0.0
@@ -224,8 +228,6 @@ class RRP_robot():
         self.joint1_flag = 0
         self.joint2_flag = 0
         self.joint3_flag = 0
-        rospy.loginfo("HEY I REACHED POSITION 1")
-        rospy.loginfo("Current Joint1 = " + str(self.joint1) + ", Joint2 = " + str(self.joint2) + ", Joint3 = " + str(self.joint3))
 
         # Stop for 1 second at each desired configuration
         sleep(1)
@@ -240,37 +242,40 @@ class RRP_robot():
         joint3_PID_controller.setPoint(p2_joint_variables.joint3)
         rospy.loginfo("Joint Angles (in radians) : theta1 = " + str(p2_joint_variables.joint1) + ", theta2 = " + str(p2_joint_variables.joint2) + ", d3 = " + str(p2_joint_variables.joint3))
      
+        joint1_PID_controller.setPID(P = 3.0, I = 0.00001, D = 30.0)
+        joint2_PID_controller.setPID(P = 2.0, I = 0.00001, D = 10.0)
+
         while (self.joint1_flag == 0 or self.joint2_flag == 0 or self.joint3_flag == 0):
 
             self.joint1_effort = joint1_PID_controller.update(self.joint1)
             self.joint2_effort = joint2_PID_controller.update(self.joint2)
             self.joint3_effort = joint3_PID_controller.update(self.joint3)
 
-            if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = JOINT1_EFFORT_LIMIT
-            elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = -JOINT1_EFFORT_LIMIT
-            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0):
+            # if (self.joint1_effort > 0.3):
+            #     self.joint1_effort = 0.3
+            # elif (self.joint1_effort < -0.3):
+            #     self.joint1_effort = -0.3
+            if (self.joint1_effort < 0.2 and self.joint1_effort > 0):
                 self.joint1_effort = 0.2
-            elif (self.joint1_effort < 0 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+            elif (self.joint1_effort < 0 and self.joint1_effort > -0.2):
                 self.joint1_effort = -0.2
-            elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
-                self.joint1_effort = 0.0
-            elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
-                self.joint1_effort = -0.0
+            # elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
+            #     self.joint1_effort = 0.0
+            # elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
+            #     self.joint1_effort = -0.0
 
-            if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
-                self.joint2_effort = JOINT2_EFFORT_LIMIT
-            elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
-                self.joint2_effort = -JOINT2_EFFORT_LIMIT
-            elif (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
+            # if (self.joint2_effort > 0.5):
+            #     self.joint2_effort = 0.5
+            # elif (self.joint2_effort < -0.5):
+            #     self.joint2_effort = -0.5
+            if (self.joint2_effort < 0.2 and self.joint2_effort > 0):
                 self.joint2_effort = 0.2
-            elif (self.joint2_effort < 0 and self.joint2_effort > -JOINT2_EFFORT_LIMIT):
+            elif (self.joint2_effort < 0 and self.joint2_effort > -0.2):
                 self.joint2_effort = -0.2
-            elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
-                self.joint2_effort = 0.0
-            elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
-                self.joint2_effort = -0.0
+            # elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
+            #     self.joint2_effort = 0.0
+            # elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
+            #     self.joint2_effort = -0.0
             
             if (self.joint3_effort > 0):
                 self.joint3_effort = JOINT3_POSITIVE_EFFORT_LIMIT
@@ -295,7 +300,8 @@ class RRP_robot():
             self.joint1_effort_publisher.publish(self.joint1_effort)
             self.joint2_effort_publisher.publish(self.joint2_effort)
             self.joint3_effort_publisher.publish(self.joint3_effort)
-
+        rospy.loginfo("HEY I REACHED POSITION 2")
+        rospy.loginfo("Current Joint1 = " + str(self.joint1) + ", Joint2 = " + str(self.joint2) + ", Joint3 = " + str(self.joint3))
         self.joint1_effort = 0.0
         self.joint2_effort = 0.0
         self.joint3_effort = 0.0
@@ -305,8 +311,6 @@ class RRP_robot():
         self.joint1_flag = 0
         self.joint2_flag = 0
         self.joint3_flag = 0
-        rospy.loginfo("HEY I REACHED POSITION 2")
-        rospy.loginfo("Current Joint1 = " + str(self.joint1) + ", Joint2 = " + str(self.joint2) + ", Joint3 = " + str(self.joint3))
 
         # Stop for 1 second at each desired configuration
         sleep(1)
@@ -321,37 +325,40 @@ class RRP_robot():
         joint3_PID_controller.setPoint(p3_joint_variables.joint3)
         rospy.loginfo("Joint Angles (in radians) : theta1 = " + str(p3_joint_variables.joint1) + ", theta2 = " + str(p3_joint_variables.joint2) + ", d3 = " + str(p3_joint_variables.joint3))
         
+        joint1_PID_controller.setPID(P = 5.0, I = 0.00001, D = 90)
+        joint2_PID_controller.setPID(P = 5.0, I = 0.00001, D = 20)
+
         while (self.joint1_flag == 0 or self.joint2_flag == 0 or self.joint3_flag == 0):
 
-            self.joint1_effort = 4*joint1_PID_controller.update(self.joint1)
+            self.joint1_effort = joint1_PID_controller.update(self.joint1)
             self.joint2_effort = joint2_PID_controller.update(self.joint2)
             self.joint3_effort = joint3_PID_controller.update(self.joint3)
 
-            if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = 0.5
-            elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = -0.5
-            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0):
+            if (self.joint1_effort > 2.0):
+                self.joint1_effort = 10.0
+            elif (self.joint1_effort < -5.0):
+                self.joint1_effort = -5.0
+            if (self.joint1_effort < 0.2 and self.joint1_effort > 0):
                 self.joint1_effort = 0.2
-            elif (self.joint1_effort < 0 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+            elif (self.joint1_effort < 0 and self.joint1_effort > -0.2):
                 self.joint1_effort = -0.2
-            elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
-                self.joint1_effort = 0.0
-            elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
-                self.joint1_effort = -0.0
+            # elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
+            #     self.joint1_effort = 0.0
+            # elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
+            #     self.joint1_effort = -0.0
 
-            if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
-                self.joint2_effort = JOINT2_EFFORT_LIMIT
-            elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
-                self.joint2_effort = -JOINT2_EFFORT_LIMIT
-            elif (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
+            # if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
+            #     self.joint2_effort = JOINT2_EFFORT_LIMIT
+            # elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
+            #     self.joint2_effort = -JOINT2_EFFORT_LIMIT
+            if (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
                 self.joint2_effort = 0.2
             elif (self.joint2_effort < 0 and self.joint2_effort > -JOINT2_EFFORT_LIMIT):
                 self.joint2_effort = -0.2
-            elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
-                self.joint2_effort = 0.0
-            elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
-                self.joint2_effort = -0.0
+            # elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
+            #     self.joint2_effort = 0.0
+            # elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
+            #     self.joint2_effort = -0.0
             
             if (self.joint3_effort > 0):
                 self.joint3_effort = JOINT3_POSITIVE_EFFORT_LIMIT
@@ -401,6 +408,9 @@ class RRP_robot():
         joint2_PID_controller.setPoint(p4_joint_variables.joint2)
         joint3_PID_controller.setPoint(p4_joint_variables.joint3)
         rospy.loginfo("Joint Angles (in radians) : theta1 = " + str(p4_joint_variables.joint1) + ", theta2 = " + str(p4_joint_variables.joint2) + ", d3 = " + str(p4_joint_variables.joint3))
+        
+        joint1_PID_controller.setPID(P = 1.0, I = 0.00001, D = 50)
+        joint2_PID_controller.setPID(P = 5.0, I = 0.00001, D = 20)
 
         while (self.joint1_flag == 0 or self.joint2_flag == 0 or self.joint3_flag == 0):
 
@@ -408,31 +418,31 @@ class RRP_robot():
             self.joint2_effort = joint2_PID_controller.update(self.joint2)
             self.joint3_effort = joint3_PID_controller.update(self.joint3)
 
-            if (self.joint1_effort > JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = JOINT1_EFFORT_LIMIT
-            elif (self.joint1_effort < -JOINT1_EFFORT_LIMIT):
-                self.joint1_effort = -JOINT1_EFFORT_LIMIT
-            elif (self.joint1_effort < JOINT1_EFFORT_LIMIT and self.joint1_effort > 0):
+            if (self.joint1_effort > 5.0):
+                self.joint1_effort = 5.0
+            elif (self.joint1_effort < 0):
+                self.joint1_effort = -10.0
+            if (self.joint1_effort < 0.2 and self.joint1_effort > 0):
                 self.joint1_effort = 0.2
-            elif (self.joint1_effort < 0 and self.joint1_effort > -JOINT1_EFFORT_LIMIT):
+            elif (self.joint1_effort < 0 and self.joint1_effort > -0.2):
                 self.joint1_effort = -0.2
-            elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
-                self.joint1_effort = 0.0
-            elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
-                self.joint1_effort = -0.0
+            # elif (self.joint1_effort > 0 and self.joint1_effort < 0.1):
+            #     self.joint1_effort = 0.0
+            # elif (self.joint1_effort > -0.1 and self.joint1_effort < 0):
+            #     self.joint1_effort = -0.0
 
-            if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
-                self.joint2_effort = JOINT2_EFFORT_LIMIT
-            elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
-                self.joint2_effort = -JOINT2_EFFORT_LIMIT
-            elif (self.joint2_effort < JOINT2_EFFORT_LIMIT and self.joint2_effort > 0):
+            # if (self.joint2_effort > JOINT2_EFFORT_LIMIT):
+            #     self.joint2_effort = JOINT2_EFFORT_LIMIT
+            # elif (self.joint2_effort < -JOINT2_EFFORT_LIMIT):
+            #     self.joint2_effort = -JOINT2_EFFORT_LIMIT
+            if (self.joint2_effort < 0.2 and self.joint2_effort > 0):
                 self.joint2_effort = 0.2
-            elif (self.joint2_effort < 0 and self.joint2_effort > -JOINT2_EFFORT_LIMIT):
+            elif (self.joint2_effort < 0 and self.joint2_effort > -0.2):
                 self.joint2_effort = -0.2
-            elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
-                self.joint2_effort = 0.0
-            elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
-                self.joint2_effort = -0.0
+            # elif (self.joint2_effort > 0 and self.joint2_effort < 0.1):
+            #     self.joint2_effort = 0.0
+            # elif (self.joint2_effort > -0.1 and self.joint2_effort < 0):
+            #     self.joint2_effort = -0.0
             
             if (self.joint3_effort > 0):
                 self.joint3_effort = JOINT3_POSITIVE_EFFORT_LIMIT
@@ -467,6 +477,7 @@ class RRP_robot():
         self.joint1_flag = 0
         self.joint2_flag = 0
         self.joint3_flag = 0
+        
         rospy.loginfo("HEY I REACHED POSITION 4")
         rospy.loginfo("Current Joint1 = " + str(self.joint1) + ", Joint2 = " + str(self.joint2) + ", Joint3 = " + str(self.joint3))
         toc = time()
