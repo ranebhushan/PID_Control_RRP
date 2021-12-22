@@ -33,7 +33,7 @@ Master of Science in Robotics Engineering at [Worcester Polytechnic Institute](h
 
 - To run this project, you will need to clone this repository in the `/src` of your ROS workspace 
     ```
-    git clone https://github.com/ranebhushan/rbe500_project.git
+    git clone https://github.com/ranebhushan/PID_Control_RRP.git
     ```
 
 - Build your ROS workspace using either `catkin_make` or `catkin build` (depending on how your workspace was created)
